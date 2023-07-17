@@ -1,3 +1,7 @@
+import math
+from transformers import AutoTokenizer, GPT2LMHeadModel
+
+
 def entropy(p):
     if p != 0:
         E = p * math.log(p, 2)
