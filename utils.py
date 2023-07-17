@@ -1,13 +1,10 @@
 import math
 from transformers import AutoTokenizer, GPT2LMHeadModel
+import pandas as pd
+from tqdm import tqdm
+import numpy as np
 
 
-def entropy(p):
-    if p != 0:
-        E = p * math.log(p, 2)
-        return -E
-    else:
-        return 0
 
 def surprisal(p):
     if p == 0:
@@ -50,7 +47,7 @@ def get_pretrained_Persian_GPT2():
 
 
 
-def calculate_prob_batch(test_set, return_subtokens = False):
+def calculate_prob_batch(model, tokenizer, test_set, return_subtokens = False):
     outputs = []
     for s in tqdm(test_set):
         soft = F.Softmax(dim=2)
@@ -64,14 +61,14 @@ def calculate_prob_batch(test_set, return_subtokens = False):
     return outputs
 
 
-def get_subtokens(test_set):
+def get_subtokens(tokenizer, test_set):
     subtokens = []
     for s in test_set:
         inputs = tokenizer(' '.join(s), return_tensors="pt")
         subtokens += inputs['input_ids'][0][1:-1].tolist()
     return subtokens
 
-def tokenizer_alignment(test_set):
+def tokenizer_alignment(tokenizer, test_set):
     out = []
     for x in test_set:
         temp_list = []
@@ -81,11 +78,6 @@ def tokenizer_alignment(test_set):
         out.append(temp_list)
     return [[len(y) for y in x] for x in out]
 
-
-
-def calculate_sequential_entropy(prob_seq):
-    temp = [entropy(prob_seq[i]) for i in range(len(prob_seq))]
-    return temp
 
 
 def calculate_sequential_surprisal(prob_seq):
@@ -111,56 +103,45 @@ def align_with_real_word_tokens(seq, alignment, type = 'sum'):
         return output
 
 
-def final_eval(test_set, type = 'entropy'):
-    outputs = calculate_prob_batch(test_set)
-    alignment = tokenizer_alignment(test_set)
+def final_eval(model, tokenizer, test_set):
+    outputs = calculate_prob_batch(model, tokenizer, test_set)
+    alignment = tokenizer_alignment(tokenizer, test_set)
     probs = [align_with_real_word_tokens(outputs[i], alignment[i], type = 'product') for i in range(len(outputs))]
     eval = []
-    if type == 'entropy':
-        for i in range(len(outputs)):
-            A = align_with_real_word_tokens(calculate_sequential_entropy(outputs[i]), alignment[i])
-            eval.append(A)
-    elif type == 'surprisal':
-        for i in range(len(outputs)):
-            A = align_with_real_word_tokens(calculate_sequential_surprisal(outputs[i]), alignment[i])
-            eval.append(A)
+    for i in range(len(outputs)):
+        A = align_with_real_word_tokens(calculate_sequential_surprisal(outputs[i]), alignment[i])
+        eval.append(A)
     return eval, probs
 
 
-def final_eval2(test_set, type = 'entropy'):
-    probs = calculate_prob_batch(test_set)
+def final_eval2(model, tokenizer, test_set):
+    probs = calculate_prob_batch(model, tokenizer, test_set)
     eval = []
-    if type == 'entropy':
-        for i in range(len(probs)):
-            A = calculate_sequential_entropy(probs[i])
-            eval.append(A)
-    elif type == 'surprisal':
-        for i in range(len(probs)):
-            A = calculate_sequential_surprisal(probs[i])
-            eval.append(A)
+    for i in range(len(probs)):
+        A = calculate_sequential_surprisal(probs[i])
+        eval.append(A)
     return eval, probs
 
 
-def save_df_to_csv(test_set, probability, entropy_list, surprisal_list, file_path = './word_list_with_evaluation.csv'):
+def df_to_csv(test_set, probability, surprisal_list, file_path = './word_list_with_evaluation.csv'):
     final_out = []
     for i, s in enumerate(test_set):
         for j, x in enumerate(s):
-            final_out.append({'word': x, 'probability': probability[i][j], 'entropy': entropy_list[i][j], 'surprisal': surprisal_list[i][j]})
+            final_out.append({'word': x, 'probability': probability[i][j], 'surprisal': surprisal_list[i][j]})
     df = pd.DataFrame(final_out)
     df.to_csv(file_path, sep='\t', index=None)
     return df
 
 
-def save_df_to_csv2(test_set, probability, entropy_list, surprisal_list, file_path = './word_list_with_evaluation.csv'):
-    sub__ = get_subtokens(cleaned_test_data)
+def df_to_csv2(tokenizer, test_set, probability, surprisal_list, file_path = './word_list_with_evaluation.csv'):
+    sub__ = get_subtokens(tokenizer, test_set)
     w__ = tokenizer.convert_ids_to_tokens(sub__)
     probability__ = [y for x in  probability for y in x]
-    entropy_list__ = [y for x in  entropy_list for y in x]
     surprisal_list__ = [y for x in  surprisal_list for y in x]
 
     final_out = []
     for i,x in enumerate(w__):
-        final_out.append({'word': x, 'probability': probability__[i], 'entropy': entropy_list__[i], 'surprisal': surprisal_list__[i]})
+        final_out.append({'word': x, 'probability': probability__[i], 'surprisal': surprisal_list__[i]})
     df = pd.DataFrame(final_out)
     df.to_csv(file_path, sep='\t', index=None)
     return df
