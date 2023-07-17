@@ -4,4 +4,4 @@ The surprisal criterion has been investigated on n-gram statistical language mod
 
 
 
-Since the GPT tokenizer may break words into sub-words, we have performed surprisal calculation in two ways. In the first method, the surprisal value is calculated for each sub-word. But in the second method, the surprisal value of each word is calculated by combining the surprisals of its sub-words
+Since the GPT tokenizer may break words into sub-words, we have performed surprisal calculation in two ways. In the first method, the surprisal value is calculated for each sub-word. But in the second method, the surprisal value of each word is calculated by combining the surprisals of its sub-words.
