@@ -3,6 +3,7 @@ from transformers import AutoTokenizer, GPT2LMHeadModel
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
+import torch.nn as F
 
 
 
